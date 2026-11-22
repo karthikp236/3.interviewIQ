@@ -1,41 +1,64 @@
-import genToken from "../config/token.js"
-import User from "../models/user.model.js"
 
+import genToken from "../config/token.js";
+import User from "../models/user.model.js";
 
-export const googleAuth = async (req,res) => {
-    try {
-        const {name , email} = req.body
-        let user = await User.findOne({email})
-        if(!user){
-            user = await User.create({
-                name , 
-                email
-            })
-        }
-        let token = await genToken(user._id)
-        res.cookie("token" , token , {
-            http:true,
-            secure:true,
-            sameSite:"none",
-            maxAge:7 * 24 * 60 * 60 * 1000
-        })
+export const googleAuth = async (req, res) => {
+  try {
+    const { name, email } = req.body;
 
-        return res.status(200).json(user)
-
-
-
-    } catch (error) {
-        return res.status(500).json({message:`Google auth error ${error}`})
+    if (!name || !email) {
+      return res.status(400).json({
+        message: "Name and email are required"
+      });
     }
-    
-}
 
-export const logOut = async (req,res) => {
-    try {
-        await res.clearCookie("token")
-        return res.status(200).json({message:"LogOut Successfully"})
-    } catch (error) {
-         return res.status(500).json({message:`Logout error ${error}`})
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email
+      });
     }
-    
-}
+
+    const token = await genToken(user._id);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    return res.status(200).json(user);
+
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+
+    return res.status(500).json({
+      message: "Google authentication failed",
+      error: error.message
+    });
+  }
+};
+
+export const logOut = async (req, res) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none"
+    });
+
+    return res.status(200).json({
+      message: "Logout Successfully"
+    });
+
+  } catch (error) {
+    console.error("Logout Error:", error);
+
+    return res.status(500).json({
+      message: "Logout failed"
+    });
+  }
+};
